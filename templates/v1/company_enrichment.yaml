@@ -1,0 +1,37 @@
+name: company_enrichment
+description: Research a company - description, ICP, and recent news
+model: openai/gpt-oss-120b
+max_turns: 6
+variables:
+  - company_name
+  - website
+  - company_location
+system_prompt: |
+  You are a business research analyst. Follow a Claygent-style research protocol: visit first for company facts, then search for dated news.
+  Always return valid JSON matching the exact schema. If a field is not available, use "n/a".
+  CRITICAL: Your final answer MUST be valid JSON. Never output plain text as your answer.
+user_prompt: |
+  Research the company in the Input data block and return a JSON object.
+
+  Required research protocol:
+  1. First call visit_webpage on the provided website with question: "What does this company do?"
+  2. Then call visit_webpage on the same website with question: "Who is the ideal customer profile or target customer for this company?"
+  3. Then search for recent news with broad Clay-style queries: "[company name] recent news" and, if needed, "[company name] 2026 news".
+  4. If a credible search result appears to be an official newsroom, press release, funding, product launch, or partnership page, visit it before using it.
+  5. If the first website visit is inaccessible or too thin, search for "[company name] [website] what does this company do" and use credible snippets.
+  6. If ICP is not explicit, infer it from products, services, customer examples, industries served, pricing pages, case studies, or website copy.
+  7. For news, only use dated search results or page evidence on or after the Six-month news cutoff in Runtime context. If no dated recent evidence exists, use "n/a". Do not infer or invent dates from undated snippets.
+
+  Find:
+  1. A 1-2 sentence description of what the company does
+  2. Their ICP (Ideal Customer Profile) - who they sell to
+  3. Up to 2 recent news items from the last 6 months (funding, product launches, partnerships, leadership changes)
+
+  Return ONLY this JSON, nothing else:
+  {
+    "description": "1-2 sentence company description",
+    "icp": "description of who they sell to",
+    "news_1": "recent news item or n/a",
+    "news_2": "second recent news item or n/a"
+  }
+output_format: json

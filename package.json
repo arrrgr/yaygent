@@ -1,0 +1,52 @@
+{
+  "name": "yaygent",
+  "version": "0.1.0",
+  "description": "Self-hosted web research API with YAML templates, structured evidence, and batch processing",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.127.0",
+    "@fastify/sensible": "^6.0.4",
+    "@mozilla/readability": "^0.6.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.2.1",
+    "https-proxy-agent": "^9.0.0",
+    "js-yaml": "^4.1.0",
+    "jsdom": "^29.0.2",
+    "node-fetch": "^3.3.2",
+    "p-queue": "^9.1.2",
+    "pg": "^8.23.0",
+    "pino": "^9.6.0",
+    "playwright": "^1.59.1",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "turndown": "^7.2.4"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/jsdom": "^28.0.1",
+    "@types/node": "^22.10.0",
+    "@types/node-fetch": "^2.6.13",
+    "@types/pg": "^8.23.1",
+    "@types/turndown": "^5.0.6",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.12"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arrrgr/yaygent.git"
+  },
+  "private": true,
+  "overrides": {
+    "esbuild": "^0.28.2"
+  }
+}

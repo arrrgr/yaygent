@@ -1,0 +1,33 @@
+version: 2
+name: find_podcast_appearances
+description: Podcast episodes where a person appeared as a guest (cycle engine)
+model: openai/gpt-oss-120b
+cache_key: [person_name, domain]
+cycles: 4
+budget: {searches: 3, visits: 2, wall_ms: 90000, cost_usd: 0.02}
+threshold: 0.55
+# research-ops-kit: only pages naming the person AND the company count (fixed 5 wrong-person + 3 not-guest of 42)
+require_mention: [person_name, company]
+variables: [person_name, company_name, domain]
+required: [person_name, company_name]
+entity: {name: appearance, min: 3, max: 3, key: episode_title}
+fields:
+  episode_title:
+    kind: extractive
+    type: string
+    required: true
+    desc: The title of one podcast episode on which THIS person (at this company) is the guest or interviewee, copied as written. Never an episode they only hosted, a different person with the same name, or a non-podcast article.
+  show_name:
+    kind: extractive
+    type: string
+    required: false
+    desc: The podcast's name, copied as written
+  episode_url:
+    kind: extractive
+    type: url
+    required: true
+    desc: The URL of that episode's page (the evidence item's own URL when it is the episode page)
+strategies:
+  - {type: search, q: '"{{person_name}}" {{company_core}} podcast', for: [episode_title, show_name, episode_url]}
+  - {type: search, q: '"{{person_name}}" podcast episode guest', for: [episode_title, show_name, episode_url]}
+  - {type: search, q: '"{{person_name}}" site:podcasts.apple.com OR site:open.spotify.com OR site:youtube.com', for: [episode_title, show_name, episode_url]}

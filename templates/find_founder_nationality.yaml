@@ -1,0 +1,32 @@
+version: 2
+name: find_founder_nationality
+description: Determine where a founder is originally from (education, early career, birthplace), not where they live now (cycle engine)
+model: openai/gpt-oss-120b
+cache_key: [person_name, linkedin_url]
+cycles: 4
+budget: {searches: 4, visits: 1, wall_ms: 45000, cost_usd: 0.02}
+# Origin is inferred from third-party pages (0.6 x 0.9 = 0.54); a second host corroborating lifts it to 0.64.
+threshold: 0.5
+variables: [person_name, linkedin_url]
+required: [person_name]
+fields:
+  country_of_origin:
+    kind: inferential
+    type: string
+    required: true
+    desc: Country the person is originally from, one or two words (Russia, Ukraine, Kazakhstan, United States). Decide from university, first jobs, birthplace or "grew up in"; never from current location.
+  education:
+    kind: extractive
+    type: string
+    required: false
+    desc: The university or school named in the evidence, copied as written
+  early_career:
+    kind: extractive
+    type: string
+    required: false
+    desc: The first employer or early-career location named in the evidence, copied as written
+strategies:
+  - {type: search, q: '"{{person_name}}" education university background', for: [education, early_career, country_of_origin]}
+  - {type: search, q: '"{{person_name}}" born OR "grew up" OR nationality OR "originally from"', for: [country_of_origin, education]}
+  - {type: search, q: '"{{person_name}}" университет OR родился OR образование', gl: ru, hl: ru, for: [country_of_origin, education, early_career]}
+  - {type: search, q: '"{{person_name}}" linkedin', for: [education, early_career, country_of_origin]}

@@ -1,0 +1,43 @@
+version: 2
+name: classify_vertical
+description: Classify a company into one business vertical label (cycle engine)
+model: openai/gpt-oss-120b
+cache_key: [domain]
+cycles: 2
+budget: {searches: 2, visits: 1, wall_ms: 30000, cost_usd: 0.01}
+# An inferential label from a third-party snippet scores 0.6 x 0.9 = 0.54; the
+# company's own site scores 0.9. 0.5 lets a clear snippet lock without a visit.
+threshold: 0.5
+variables: [company_name, website]
+required: [company_name, website]
+fields:
+  vertical:
+    kind: inferential
+    type: enum
+    required: true
+    enum:
+      - SaaS
+      - Marketplace
+      - Agency
+      - E-commerce
+      - FinTech
+      - HR Tech
+      - Legal Tech
+      - Health Tech
+      - PropTech
+      - EdTech
+      - AdTech
+      - Dev Tools
+      - Data / AI
+      - Logistics / Supply Chain
+      - Manufacturing
+      - Consulting
+      - Media / Content
+      - Recruiting
+      - Real Estate
+      - Non-Tech
+      - Other Tech
+    desc: The single best label for what kind of company this is, based on what it sells and to whom
+strategies:
+  - {type: search, q: '{{company_core}} {{domain}} what does the company do', for: [vertical]}
+  - {type: visit_discover, from: 'https://{{domain}}', follow: [about, product, products, solutions, platform, company], question: 'what does the company do and who is it for', for: [vertical]}

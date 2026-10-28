@@ -1,0 +1,52 @@
+version: 2
+name: company_enrichment
+description: Research a company - description, ICP, and dated recent news (cycle engine)
+model: openai/gpt-oss-120b
+cache_key: [domain]
+cycles: 5
+# description + icp lock first and the loop would stop there, so news_1/news_2
+# were structurally unreachable (review 2.6). They cannot be `required` - most
+# companies genuinely have no recent news and the row would never complete - so
+# they get a dedicated budget of 2 extra cycles for the two news searches.
+optional_cycles: 2
+budget: {searches: 3, visits: 3, wall_ms: 60000, cost_usd: 0.02}
+threshold: 0.7
+variables: [company_name, website, company_location]
+required: [company_name, website]
+fields:
+  description:
+    kind: inferential
+    type: string
+    required: true
+    desc: A 1-2 sentence description of what the company does, written from the evidence
+  icp:
+    kind: inferential
+    type: string
+    required: true
+    desc: Who they sell to (ideal customer profile), inferred from products, pricing, case studies, industries served or customer examples
+  news_1:
+    kind: extractive
+    type: string
+    required: false
+    desc: A recent news headline or announcement about the company (funding, product launch, partnership, leadership change), copied as written
+  news_1_date:
+    kind: extractive
+    type: date
+    required: false
+    desc: The date of news_1 exactly as shown on the evidence item's date line (YYYY-MM-DD)
+  news_2:
+    kind: extractive
+    type: string
+    required: false
+    desc: A second recent news headline about the company, copied as written
+  news_2_date:
+    kind: extractive
+    type: date
+    required: false
+    desc: The date of news_2 exactly as shown on the evidence item's date line (YYYY-MM-DD)
+strategies:
+  - {type: visit_discover, from: 'https://{{domain}}', follow: [about, company, story, mission, what-we-do], question: 'what does the company do', for: [description, icp]}
+  - {type: visit_discover, from: 'https://{{domain}}', follow: [customers, solutions, pricing, industries, case-studies, who-we-serve, use-cases], question: 'who are the customers and ideal customer profile', for: [icp, description]}
+  - {type: search, q: '{{company_core}} {{domain}}', search_type: news, recency: 6m, for: [news_1, news_1_date, news_2, news_2_date]}
+  - {type: search, q: '"{{company_core}}" announces OR launches OR raises OR partners OR appoints', search_type: news, recency: 6m, for: [news_1, news_1_date, news_2, news_2_date]}
+  - {type: search, q: '{{company_core}} {{domain}} what does this company do', for: [description, icp]}

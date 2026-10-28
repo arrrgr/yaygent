@@ -1,0 +1,64 @@
+version: 2
+name: qualify_company
+description: Company qualification - business model, SaaS or not, category (research-ops-kit taxonomy v2b) and who they sell to (cycle engine)
+model: openai/gpt-oss-120b
+cache_key: [domain]
+cycles: 3
+budget: {searches: 1, visits: 3, wall_ms: 60000, cost_usd: 0.01}
+# own site scores 0.9 for an inferential field, a third-party snippet 0.54
+threshold: 0.5
+variables: [company_name, domain]
+required: [company_name, domain]
+fields:
+  business_model:
+    kind: inferential
+    type: enum
+    required: true
+    enum: [b2b, b2c, both]
+    criteria:
+      b2b: Sells mainly to businesses or organizations
+      b2c: Sells mainly to individual consumers
+      both: Sells substantially to both businesses and consumers
+    desc: "Who the company mainly sells to. b2b = mainly businesses or organizations; b2c = mainly individual consumers; both = substantially both."
+  is_saas:
+    kind: inferential
+    type: enum
+    required: true
+    enum: ["yes", "no"]
+    criteria:
+      "yes": Its main product is software delivered as a subscription / online service
+      "no": Its main offering is not SaaS (services, physical goods, non-subscription)
+    desc: "Is the company's MAIN product software sold as a subscription or online service? A consumer app whose main product is a paid subscription counts as yes. Services delivered by people (crowd-testing, white-label fulfillment, agencies, consulting) are no even if they use software."
+  category:
+    kind: inferential
+    type: enum
+    required: true
+    enum: [software_saas, it_services, agency_marketing, consulting_services, ecommerce_brand, retail_store, manufacturing, financial_services, healthcare, real_estate, construction_trades, food_hospitality, education, nonprofit_gov, health_wellness_fitness, other]
+    criteria:
+      software_saas: Sells its own software / SaaS product
+      it_services: IT services, MSP, software development or consulting for hire
+      agency_marketing: Marketing, advertising, creative, PR or media agency
+      consulting_services: Business consulting or professional services (legal, accounting, HR, staffing)
+      ecommerce_brand: Consumer brand selling physical products online (D2C / e-commerce), INCLUDING food and drink brands sold direct to consumers
+      retail_store: Physical retail store or dealer
+      manufacturing: Manufacturer / industrial / wholesale / distribution of non-food goods
+      financial_services: Bank, credit union, lender, insurance, wealth or payments
+      healthcare: Healthcare provider, medical practice, pharma, health services (not gyms/fitness/wellness studios)
+      real_estate: Real estate brokerage, property management, appraisal
+      construction_trades: Construction, contractors, home services and trades
+      food_hospitality: Restaurants, cafes, hospitality, travel, and food producers that sell mainly wholesale or to institutions (e.g. a flour mill, a school-food supplier)
+      education: Schools, training, e-learning
+      nonprofit_gov: Non-profit, association, government
+      health_wellness_fitness: Gyms, fitness or rehab studios, yoga, pilates, Gyrotonic, wellness and spa businesses
+      other: None of the above
+    desc: "The one best category. software_saas = sells its own software/SaaS product; it_services = IT services, MSP, software development or consulting for hire; agency_marketing = marketing, advertising, creative, PR or media agency; consulting_services = business consulting or professional services (legal, accounting, HR, staffing); ecommerce_brand = consumer brand selling physical products online (D2C), including food and drink brands sold direct to consumers; retail_store = physical retail store or dealer; manufacturing = manufacturer / industrial / wholesale / distribution of non-food goods; financial_services = bank, credit union, lender, insurance, wealth or payments; healthcare = healthcare provider, medical practice, pharma, health services (not gyms/fitness/wellness); real_estate = brokerage, property management, appraisal; construction_trades = construction, contractors, home services and trades; food_hospitality = restaurants, cafes, hospitality, travel, and food producers selling mainly wholesale or to institutions; education = schools, training, e-learning; nonprofit_gov = non-profit, association, government; health_wellness_fitness = gyms, fitness or rehab studios, yoga, pilates, wellness and spa; other = none of the above."
+  sells_to:
+    kind: inferential
+    type: string
+    required: true
+    desc: "Who they sell to, in one short phrase naming the buyer (e.g. 'mid-size hospitals', 'homeowners in Phoenix', 'Shopify merchants')."
+strategies:
+  # research-ops-kit first pass: homepage -> Jev labels; anything below 0.9 (and sells_to) goes to the extractor below
+  - {type: jev, from: 'https://{{domain}}', min_confidence: 0.9, for: [business_model, is_saas, category]}
+  - {type: visit_discover, from: 'https://{{domain}}', follow: [about, solutions, services, products, customers, industries, who-we-serve], question: 'what does the company sell and who does it sell to', for: [business_model, is_saas, category, sells_to]}
+  - {type: search, q: '"{{company_core}}" {{domain}}', for: [business_model, is_saas, category, sells_to]}

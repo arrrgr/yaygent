@@ -1,0 +1,48 @@
+version: 2
+name: find_founders
+description: Find company founders with verified personal LinkedIn URLs and a country-of-origin signal (cycle engine)
+model: openai/gpt-oss-120b
+cache_key: [domain]
+cycles: 6
+# +1 search and +60s over the pre-xray budget: a failed xray must not starve the strategies after it
+budget: {searches: 6, visits: 3, wall_ms: 210000, cost_usd: 0.02}
+threshold: 0.7
+confirm_linkedin: true
+# Only domain + company_name are required;
+# the rest sharpen disambiguation and the profile_cache lookup.
+variables: [company_name, domain, company_linkedin_url, industry, description, founded, locality]
+required: [company_name, domain]
+entity: {name: founder, min: 1, max: 3, key: full_name, role_pattern: '\b(co-?founders?|founders?|founding|co-?owners?|owner)\b'}
+fields:
+  full_name:
+    kind: extractive
+    type: string
+    required: true
+    desc: The founder's full name exactly as written in the evidence
+  title:
+    kind: extractive
+    type: string
+    required: false
+    desc: Their role as written (Founder, Co-founder & CTO, CEO/Founder)
+  linkedin_url:
+    kind: extractive
+    type: linkedin_person_url
+    required: true
+    desc: The personal linkedin.com/in/ profile URL of this founder (never a /company/ page)
+  country_of_origin:
+    kind: inferential
+    type: string
+    required: false
+    desc: Where the founder is originally from (nationality, birthplace, grew up, early education). Not their current location and not the company HQ.
+strategies:
+  - {type: profile_cache, for: [full_name, title, linkedin_url, country_of_origin]}
+  # Cheap first pass (research-ops-kit ladder): one LinkedIn search, profile-checked candidates. A hit completes the row.
+  - {type: xray, q: 'site:linkedin.com/in "{{company_core}}" (founder OR co-founder OR owner)', max: 3, for: [full_name, title, linkedin_url]}
+  # Own site first: names found there lock at tier 1.0 and anchor the LinkedIn search.
+  - {type: visit_discover, from: 'https://{{domain}}', follow: [about, team, founders, leadership, story, company], question: 'who founded the company', for: [full_name, title]}
+  - {type: search, q: '"{{company_core}}" founder site:linkedin.com/in', for: [full_name, title, linkedin_url]}
+  - {type: search, q: '{{company_core}} {{domain}} founder OR co-founder', for: [full_name, title, linkedin_url]}
+  - {type: search, q: '"{{founder.full_name}}" {{company_core}} founder linkedin', for: [linkedin_url], needs: [founder.full_name], per_entity: true}
+  # Fallback when snippets could not establish a founder: scrape up to 2 candidate profiles (Apify, cached in public.linkedin_profiles).
+  - {type: profile_scrape, max: 2, for: [full_name, title, linkedin_url, country_of_origin]}
+  - {type: search, q: '"{{founder.full_name}}" born OR "grew up" OR nationality OR university', for: [country_of_origin], needs: [founder.full_name], per_entity: true, gl: us}

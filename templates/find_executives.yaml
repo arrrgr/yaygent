@@ -1,0 +1,44 @@
+version: 2
+name: find_executives
+description: Find C-level / VP executives at a company (Finance and Operations first, CEO or founder as fallback) with verified LinkedIn URLs (cycle engine)
+model: openai/gpt-oss-120b
+cache_key: [domain]
+cycles: 6
+budget: {searches: 4, visits: 3, wall_ms: 60000, cost_usd: 0.02}
+threshold: 0.7
+variables: [company_name, website, sector]
+required: [company_name, website]
+entity: {name: lead, min: 1, max: 3, key: full_name}
+fields:
+  full_name:
+    kind: extractive
+    type: string
+    required: true
+    desc: The executive's full name exactly as written in the evidence
+  title:
+    kind: extractive
+    type: string
+    required: true
+    desc: Their title exactly as written (CFO, COO, VP of Finance, Director of Operations, CEO, Founder, Managing Director)
+  function:
+    kind: inferential
+    type: enum
+    required: false
+    enum: [Finance, Operations, Executive, Other]
+    desc: Finance = CFO/VP Finance/Controller; Operations = COO/VP Ops/Chief Admin; Executive = CEO/Founder/Managing Director; Other = anything else
+  linkedin_url:
+    # REQUIRED on purpose. The loop stops the moment every required field is
+    # locked, so as an optional field this could only ever be filled when
+    # full_name or title happened to still be missing - the per-entity LinkedIn
+    # search below never fired and the template returned leads with no profile
+    # URL at all (review 2.6). find_founders has always had it required.
+    kind: extractive
+    type: linkedin_person_url
+    required: true
+    desc: The personal linkedin.com/in/ profile URL of this executive (never a /company/ page)
+strategies:
+  - {type: profile_cache, for: [full_name, title, linkedin_url, function]}
+  - {type: visit_discover, from: 'https://{{domain}}', follow: [leadership, team, about, management, executives, board, company], question: 'who are the executives and leadership team, especially finance and operations', for: [full_name, title, function]}
+  - {type: search, q: '"{{company_core}}" CFO OR COO OR "VP of Finance" OR "VP of Operations" OR "Director of Finance" site:linkedin.com/in', for: [full_name, title, function, linkedin_url]}
+  - {type: search, q: '{{company_core}} {{domain}} CEO OR founder OR "managing director"', for: [full_name, title, function, linkedin_url]}
+  - {type: search, q: '"{{lead.full_name}}" {{company_core}} linkedin', for: [linkedin_url], needs: [lead.full_name], per_entity: true}

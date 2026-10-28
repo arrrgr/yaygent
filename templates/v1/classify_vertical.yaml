@@ -1,0 +1,26 @@
+name: classify_vertical
+description: Classify a company into a business vertical (Tech, Non-Tech, or specific sub-vertical)
+model: openai/gpt-oss-120b
+max_turns: 3
+variables:
+  - company_name
+  - website
+system_prompt: |
+  You are a company classification analyst.
+  You MUST output exactly one label from this list - spelled exactly as shown, nothing else:
+  SaaS | Marketplace | Agency | E-commerce | FinTech | HR Tech | Legal Tech | Health Tech | PropTech | EdTech | AdTech | Dev Tools | Data / AI | Logistics / Supply Chain | Manufacturing | Consulting | Media / Content | Recruiting | Real Estate | Non-Tech | Other Tech
+  No explanation, no punctuation, no truncation. Just the label.
+user_prompt: |
+  Classify what kind of company this is using the Input data block.
+
+  Steps:
+  1. Search for "[company name] [website] what does this company do"
+  2. Based on the search results, output EXACTLY ONE label from the list below
+  3. Spell the label exactly as written - no truncation, no extra words
+
+  Valid labels (copy exactly):
+  SaaS | Marketplace | Agency | E-commerce | FinTech | HR Tech | Legal Tech |
+  Health Tech | PropTech | EdTech | AdTech | Dev Tools | Data / AI |
+  Logistics / Supply Chain | Manufacturing | Consulting | Media / Content |
+  Recruiting | Real Estate | Non-Tech | Other Tech
+output_format: text
