@@ -10,8 +10,9 @@ Built with TypeScript, Fastify, and optional Playwright. The default cycle engin
 - An API key you choose for protecting your Yaygent server.
 - Credentials for your selected LLM provider.
 - A Serper API key for reliable Google web/news search.
+- A residential rotating proxy URL with your provider username and password.
 
-PostgreSQL, Apify, Jina credentials, a proxy, and a browser are optional. External API calls can incur charges. Mocked tests require no provider credentials.
+PostgreSQL, Apify, Jina credentials, and a browser are optional. External API calls can incur charges. Mocked tests require no provider credentials.
 
 ## Quick start
 
@@ -30,8 +31,11 @@ YAYGENT_API_KEY=replace-with-a-long-random-secret
 LLM_PROVIDER=openrouter
 OPENROUTER_API_KEY=replace-with-your-openrouter-key
 SERPER_API_KEY=replace-with-your-serper-key
+PROXY_URL_ROTATE=http://username:password@proxy-host:port
 BROWSER_POOL_SIZE=0
 ```
+
+Replace the proxy placeholder with your residential provider's authenticated gateway URL. For Webshare, use the rotating username (`<user>-rotate`); URL-encode special characters in the username and password.
 
 Generate a server key with `openssl rand -hex 32`. Never commit your `.env`.
 
@@ -65,6 +69,7 @@ curl -fsS http://localhost:3000/v1/templates \
 | `OPENROUTER_API_KEY` | Default `openrouter` provider; also ReAct/inline runs | OpenRouter credential. ReAct uses OpenRouter independently of the cycle provider setting. |
 | `ANTHROPIC_API_KEY` | `LLM_PROVIDER=anthropic` | Anthropic Messages API credential. |
 | `SERPER_API_KEY` | Recommended for useful search | Google web/news search through Serper. The server warns, but can boot without it. |
+| `PROXY_URL_ROTATE` | Standard setup | Residential rotating proxy URL: `http://username:password@host:port`. Used for target-site fetches and Bing fallback. |
 
 Cycle models resolve from request override, template model, then provider default. OpenRouter uses `openai/gpt-oss-120b` by default; Anthropic uses `claude-haiku-4-5-20251001` when a template specifies an incompatible OpenRouter model ID. CLI models map to `haiku` or `sonnet`. Model availability depends on your provider account.
 
